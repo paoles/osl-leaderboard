@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ottawa Super League – Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #d9d9d9;
+    --surface: #e8e8e8;
+    --surface-hover: #d0d0d0;
+    --border: #bfbfbf;
+    --text: #1a1a1a;
+    --text-dim: #555555;
+    --accent: #2d6b3f;
+    --accent-light: #237a34;
+    --accent-dark: #1b5530;
+    --orange: #e8842a;
+    --orange-light: #f09030;
+    --gold: #d4a017;
+    --silver: #707070;
+    --bronze: #cd7f32;
+    --red: #c0392b;
+    --blue: #2874a6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: transparent;
+    color: var(--text);
+    padding: 0;
+  }
+
+  .container { max-width: 100%; margin: 0; }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 700px; }
+
+  thead th {
+    background: var(--accent);
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    border-bottom: 1px solid var(--accent-dark);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  thead th:hover { background: var(--accent-dark); }
+  thead th.sorted { background: var(--accent-dark); color: var(--orange-light); }
+  thead th .arrow { margin-left: 4px; font-size: 0.65rem; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(191, 191, 191, 0.5);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--surface-hover); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 11px 14px; white-space: nowrap; }
+
+  .rank-cell { font-weight: 800; font-size: 0.9rem; width: 44px; text-align: center; }
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: var(--silver); }
+  .rank-3 { color: var(--bronze); }
+  .player-name { font-weight: 600; color: var(--text); }
+
+  .social-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    background: rgba(232, 132, 42, 0.12);
+    border: 1px solid rgba(232, 132, 42, 0.3);
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--orange);
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
+
+  .gp-cell { color: var(--text-dim); font-weight: 500; }
+  .stat-good { color: var(--accent); font-weight: 600; }
+  .stat-bad { color: var(--red); font-weight: 600; }
+  .stat-neutral { color: var(--text-dim); }
+  .win-pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .record { font-variant-numeric: tabular-nums; color: var(--text-dim); }
+  .record .w { color: var(--accent); font-weight: 600; }
+  .record .l { color: var(--red); font-weight: 600; }
+
+  .pct-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .pct-bar { width: 60px; height: 6px; background: rgba(0,0,0,0.08); border-radius: 3px; overflow: hidden; }
+  .pct-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+  .status { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+  .status .spinner {
+    display: inline-block; width: 28px; height: 28px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(192, 57, 43, 0.1);
+    border: 1px solid rgba(192, 57, 43, 0.3);
+    border-radius: 10px; padding: 20px;
+    text-align: center; color: var(--red); font-size: 0.85rem; line-height: 1.6;
+  }
+
+  .last-updated { text-align: center; margin-top: 12px; font-size: 0.72rem; color: var(--text-dim); }
+
+  @media (max-width: 640px) {
+    table { font-size: 0.78rem; }
+    thead th, tbody td { padding: 9px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="table-wrap">
+    <div id="content">
+      <div class="status"><div class="spinner"></div><p>Loading leaderboard...</p></div>
+    </div>
+  </div>
+  <div class="last-updated" id="updated"></div>
+</div>
+
+<script>
+// Published spreadsheet ID (from the /e/.../ portion of the pubhtml URL)
+const PUBLISHED_ID = '2PACX-1vSjr7WahvwotuZF_azUBnXmqE5ctwvEBqeSLP6m5jl_O5DK63Mt2UPkOc-CNSFUAv6jASmPNlXeEda9';
+const GID = '0'; // sheet tab gid
+
+let allPlayers = [];
+let currentView = 'all';
+let sortCol = null;
+let sortAsc = true;
+
+function parseCSV(text) {
+  const rows = []; let current = '', inQuotes = false, row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i+1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(current.trim()); current = ''; }
+      else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+        row.push(current.trim());
+        if (row.some(c => c !== '')) rows.push(row);
+        row = []; current = '';
+        if (ch === '\r') i++;
+      } else current += ch;
+    }
+  }
+  row.push(current.trim());
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+function buildPlayers(rows) {
+  const players = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = r[2] || '';
+    if (!name || name.startsWith('Rank counts')) continue;
+    const isSocial = name.includes('(Social)');
+    players.push({
+      gp: parseInt(r[0]) || 0,
+      rank: r[1] ? parseInt(r[1]) : null,
+      name: name.replace(' (Social)', ''),
+      isSocial,
+      strokeAvg: parseFloat(r[3]) || null,
+      hdcpAvg: parseFloat(r[4]) || null,
+      bestRound: parseInt(r[5]) || null,
+      worstRound: parseInt(r[6]) || null,
+      median: parseInt(r[7]) || null,
+      wins: parseInt(r[8]) || 0,
+      losses: parseInt(r[9]) || 0,
+      ties: parseInt(r[10]) || 0,
+      winPct: r[11] ? parseFloat(r[11].replace('%','')) : 0
+    });
+  }
+  return players;
+}
+
+function filterPlayers(players, view) {
+  if (view === 'ranked') return players.filter(p => p.rank !== null);
+  if (view === 'social') return players.filter(p => p.isSocial);
+  return [...players];
+}
+
+function sortPlayers(players, col, asc) {
+  if (!col) return players.sort((a,b) => {
+    if (a.rank && b.rank) return a.rank - b.rank;
+    if (a.rank) return -1; if (b.rank) return 1;
+    return (a.strokeAvg||999) - (b.strokeAvg||999);
+  });
+  return players.sort((a,b) => {
+    let va = a[col], vb = b[col];
+    // String sort for name
+    if (typeof va === 'string' || typeof vb === 'string') {
+      va = (va || '').toLowerCase();
+      vb = (vb || '').toLowerCase();
+      return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    // Numeric sort — nulls go to the end
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return asc ? va - vb : vb - va;
+  });
+}
+
+function render() {
+  let players = sortPlayers(filterPlayers(allPlayers, currentView), sortCol, sortAsc);
+  const bestAvg = Math.min(...allPlayers.filter(p=>p.strokeAvg).map(p=>p.strokeAvg));
+
+  let html = '<div class="table-scroll"><table><thead><tr>';
+  const cols = [
+    {key:'rank',label:'#'},{key:'name',label:'Player',string:true},
+    {key:'gp',label:'GP'},{key:'strokeAvg',label:'Stroke Avg'},{key:'hdcpAvg',label:'Hdcp'},
+    {key:'bestRound',label:'Best'},{key:'worstRound',label:'Worst'},
+    {key:'wins',label:'Wins'},{key:'winPct',label:'Win %'}
+  ];
+  cols.forEach(c => {
+    const sorted = sortCol === c.key;
+    html += `<th${sorted?' class="sorted"':''} onclick="handleSort('${c.key}')">${c.label}${sorted?`<span class="arrow">${sortAsc?'▲':'▼'}</span>`:''}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  players.forEach(p => {
+    const rankClass = p.rank && p.rank <= 3 ? ` rank-${p.rank}` : '';
+    const pctColor = p.winPct >= 60 ? 'var(--accent)' : p.winPct >= 40 ? 'var(--orange)' : p.winPct > 0 ? 'var(--red)' : 'var(--text-dim)';
+    html += `<tr>
+      <td class="rank-cell${rankClass}">${p.rank||'—'}</td>
+      <td><span class="player-name">${p.name}</span>${p.isSocial?'<span class="social-tag">Social</span>':''}</td>
+      <td class="gp-cell">${p.gp}</td>
+      <td style="font-weight:600;color:${p.strokeAvg===bestAvg?'var(--gold)':'var(--text)'}">${p.strokeAvg?p.strokeAvg.toFixed(2):'—'}</td>
+      <td class="stat-neutral">${p.hdcpAvg?p.hdcpAvg.toFixed(1):'—'}</td>
+      <td class="stat-good">${p.bestRound||'—'}</td>
+      <td class="stat-bad">${p.worstRound||'—'}</td>
+      <td class="record"><span class="w">${p.wins}</span>&nbsp;·&nbsp;<span class="l">${p.losses}</span>&nbsp;·&nbsp;${p.ties}</td>
+      <td><div class="pct-bar-wrap"><span class="win-pct" style="color:${pctColor}">${p.winPct.toFixed(0)}%</span><div class="pct-bar"><div class="pct-bar-fill" style="width:${p.winPct}%;background:${pctColor}"></div></div></div></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function handleSort(key) {
+  if (sortCol === key) {
+    sortAsc = !sortAsc;
+  } else {
+    sortCol = key;
+    // Default ascending for columns where lower = better or alphabetical
+    sortAsc = ['rank','strokeAvg','hdcpAvg','bestRound','worstRound','name'].includes(key);
+  }
+  render();
+}
+window.handleSort = handleSort;
+
+// --- Demo fallback data ---
+function loadDemoData() {
+  allPlayers = [
+    {gp:10,rank:1,name:'Justin VBS',isSocial:true,strokeAvg:41.50,hdcpAvg:5.26,bestRound:36,worstRound:44,median:42,wins:6,losses:2,ties:2,winPct:60},
+    {gp:16,rank:2,name:'Blair Watson',isSocial:false,strokeAvg:42.50,hdcpAvg:6.52,bestRound:39,worstRound:47,median:43,wins:8,losses:8,ties:0,winPct:50},
+    {gp:11,rank:3,name:'Nico Paoletti',isSocial:false,strokeAvg:42.73,hdcpAvg:7.31,bestRound:38,worstRound:46,median:43,wins:9,losses:2,ties:0,winPct:81.82},
+    {gp:13,rank:4,name:'Jared Maltais',isSocial:false,strokeAvg:45.00,hdcpAvg:9.43,bestRound:41,worstRound:49,median:44,wins:3,losses:9,ties:1,winPct:23.08},
+    {gp:11,rank:5,name:'Ben Silverman',isSocial:false,strokeAvg:49.82,hdcpAvg:13.67,bestRound:41,worstRound:58,median:49,wins:2,losses:9,ties:0,winPct:18.18},
+    {gp:10,rank:6,name:'Daniel Perry',isSocial:false,strokeAvg:55.10,hdcpAvg:18.37,bestRound:47,worstRound:63,median:56,wins:0,losses:10,ties:0,winPct:0},
+    {gp:4,rank:null,name:'Kevin Slack',isSocial:false,strokeAvg:40.00,hdcpAvg:5.02,bestRound:38,worstRound:42,median:40,wins:3,losses:1,ties:0,winPct:75},
+    {gp:2,rank:null,name:'Dalton Manley',isSocial:true,strokeAvg:41.50,hdcpAvg:5.25,bestRound:41,worstRound:42,median:42,wins:1,losses:0,ties:1,winPct:50},
+    {gp:5,rank:null,name:'Gavin Bradley',isSocial:false,strokeAvg:43.20,hdcpAvg:7.76,bestRound:40,worstRound:47,median:43,wins:1,losses:4,ties:0,winPct:20},
+    {gp:3,rank:null,name:'Andrei Ghita',isSocial:true,strokeAvg:45.00,hdcpAvg:9.27,bestRound:44,worstRound:46,median:45,wins:1,losses:2,ties:0,winPct:33.33},
+    {gp:5,rank:null,name:'Ryan Woolcock',isSocial:false,strokeAvg:47.00,hdcpAvg:10.81,bestRound:45,worstRound:48,median:48,wins:0,losses:5,ties:0,winPct:0},
+    {gp:1,rank:null,name:'Donovan Gifford',isSocial:true,strokeAvg:50.00,hdcpAvg:13.32,bestRound:50,worstRound:50,median:50,wins:0,losses:1,ties:0,winPct:0},
+    {gp:1,rank:null,name:'Davis Sawyer',isSocial:true,strokeAvg:45.00,hdcpAvg:8.98,bestRound:45,worstRound:45,median:45,wins:1,losses:0,ties:0,winPct:100},
+    {gp:4,rank:null,name:'Peter Carniglia',isSocial:false,strokeAvg:56.00,hdcpAvg:19.06,bestRound:53,worstRound:60,median:56,wins:0,losses:4,ties:0,winPct:0},
+    {gp:2,rank:null,name:'Sam Anderson',isSocial:true,strokeAvg:53.00,hdcpAvg:15.92,bestRound:50,worstRound:56,median:53,wins:0,losses:2,ties:0,winPct:0},
+  ];
+  render();
+  document.getElementById('updated').textContent = 'Showing demo data — publish your Google Sheet to see live data';
+}
+
+function loadData() {
+  // Use JSONP via gviz/tq to avoid CORS issues with published sheets
+  const callbackName = 'gvizCallback_' + Date.now();
+  const url = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?output=csv&gid=${GID}`;
+
+  // Timeout fallback to demo data
+  const timeout = setTimeout(() => {
+    console.warn('Live fetch timed out, loading demo data');
+    loadDemoData();
+  }, 6000);
+
+  // Use fetch with no-cors won't work for reading; instead use a proxy-free approach:
+  // Google's published CSV can be fetched directly when served from a real web server.
+  // We use XMLHttpRequest which respects CORS headers from Google's servers.
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.onload = function() {
+    clearTimeout(timeout);
+    if (xhr.status === 200) {
+      try {
+        const rows = parseCSV(xhr.responseText);
+        if (rows.length < 2) throw new Error('No data rows');
+        allPlayers = buildPlayers(rows);
+        render();
+        const now = new Date();
+        document.getElementById('updated').textContent =
+          `Last refreshed: ${now.toLocaleDateString('en-CA')} at ${now.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'})}`;
+      } catch(e) {
+        console.warn('Parse error, loading demo:', e);
+        loadDemoData();
+      }
+    } else {
+      console.warn('HTTP error', xhr.status, '— loading demo');
+      loadDemoData();
+    }
+  };
+  xhr.onerror = function() {
+    clearTimeout(timeout);
+    console.warn('Network error, loading demo');
+    loadDemoData();
+  };
+  xhr.send();
+}
+
+loadData();
+</script>
+</body>
+</html>

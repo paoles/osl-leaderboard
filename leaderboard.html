@@ -126,9 +126,70 @@
 
   .last-updated { text-align: center; margin-top: 12px; font-size: 0.72rem; color: var(--text-dim); }
 
+  /* ── Mobile: card layout ── */
   @media (max-width: 640px) {
-    table { font-size: 0.78rem; }
-    thead th, tbody td { padding: 9px 10px; }
+    .table-wrap { border-radius: 10px; }
+
+    /* Hide the table header on mobile */
+    thead { display: none; }
+
+    /* Each row becomes a card */
+    table, tbody, tr, td { display: block; width: 100%; }
+
+    tbody tr {
+      border-bottom: none;
+      border-radius: 8px;
+      background: var(--surface);
+      margin: 6px 8px;
+      width: calc(100% - 16px);
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+    }
+    tbody tr:hover { background: var(--surface-hover); }
+
+    /* Hide all cells by default, show via data-label */
+    tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      white-space: normal;
+      font-size: 0.82rem;
+      border: none;
+    }
+
+    /* Label on left */
+    tbody td::before {
+      content: attr(data-label);
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      min-width: 80px;
+    }
+
+    /* Rank + name as card header row */
+    tbody td.td-rank {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td.td-rank::before { display: none; }
+    tbody td.td-rank .rank-cell {
+      font-size: 1.1rem;
+      width: 32px;
+      text-align: center;
+    }
+    tbody td.td-name { display: none; } /* name shown inside rank cell row */
+
+    /* Win% bar hidden on mobile, just show number */
+    .pct-bar { display: none; }
+    .pct-bar-wrap { gap: 0; }
   }
 </style>
 </head>
@@ -249,16 +310,20 @@ function render() {
   players.forEach(p => {
     const rankClass = p.rank && p.rank <= 3 ? ` rank-${p.rank}` : '';
     const pctColor = p.winPct >= 60 ? 'var(--accent)' : p.winPct >= 40 ? 'var(--orange)' : p.winPct > 0 ? 'var(--red)' : 'var(--text-dim)';
+    const strokeColor = p.strokeAvg === bestAvg ? 'var(--gold)' : 'var(--text)';
     html += `<tr>
-      <td class="rank-cell${rankClass}">${p.rank||'—'}</td>
-      <td><span class="player-name">${p.name}</span>${p.isSocial?'<span class="social-tag">Social</span>':''}</td>
-      <td class="gp-cell">${p.gp}</td>
-      <td style="font-weight:600;color:${p.strokeAvg===bestAvg?'var(--gold)':'var(--text)'}">${p.strokeAvg?p.strokeAvg.toFixed(2):'—'}</td>
-      <td class="stat-neutral">${p.hdcpAvg?p.hdcpAvg.toFixed(1):'—'}</td>
-      <td class="stat-good">${p.bestRound||'—'}</td>
-      <td class="stat-bad">${p.worstRound||'—'}</td>
-      <td class="record"><span class="w">${p.wins}</span>&nbsp;·&nbsp;<span class="l">${p.losses}</span>&nbsp;·&nbsp;${p.ties}</td>
-      <td><div class="pct-bar-wrap"><span class="win-pct" style="color:${pctColor}">${p.winPct.toFixed(0)}%</span><div class="pct-bar"><div class="pct-bar-fill" style="width:${p.winPct}%;background:${pctColor}"></div></div></div></td>
+      <td class="td-rank">
+        <span class="rank-cell${rankClass}">${p.rank||'—'}</span>
+        <span><span class="player-name">${p.name}</span>${p.isSocial?'<span class="social-tag">Social</span>':''}</span>
+      </td>
+      <td class="td-name"><span class="player-name">${p.name}</span>${p.isSocial?'<span class="social-tag">Social</span>':''}</td>
+      <td class="gp-cell" data-label="Games">${p.gp}</td>
+      <td data-label="Stroke Avg" style="font-weight:600;color:${strokeColor}">${p.strokeAvg?p.strokeAvg.toFixed(2):'—'}</td>
+      <td class="stat-neutral" data-label="Hdcp">${p.hdcpAvg?p.hdcpAvg.toFixed(1):'—'}</td>
+      <td class="stat-good" data-label="Best">${p.bestRound||'—'}</td>
+      <td class="stat-bad" data-label="Worst">${p.worstRound||'—'}</td>
+      <td class="record" data-label="Record"><span class="w">${p.wins}</span>&nbsp;·&nbsp;<span class="l">${p.losses}</span>&nbsp;·&nbsp;${p.ties}</td>
+      <td data-label="Win %"><div class="pct-bar-wrap"><span class="win-pct" style="color:${pctColor}">${p.winPct.toFixed(0)}%</span><div class="pct-bar"><div class="pct-bar-fill" style="width:${p.winPct}%;background:${pctColor}"></div></div></div></td>
     </tr>`;
   });
   html += '</tbody></table></div>';

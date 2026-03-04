@@ -126,8 +126,8 @@
 
   .last-updated { text-align: center; margin-top: 12px; font-size: 0.72rem; color: var(--text-dim); }
 
-  /* ── Mobile: card layout ── */
-  @media (max-width: 640px) {
+  /* ── Mobile: card layout — triggered by media query OR .mobile class (JS fallback for iframes) ── */
+  @media (max-width: 768px), (max-device-width: 768px) {
     .table-wrap { border-radius: 10px; }
 
     /* Hide the table header on mobile */
@@ -191,6 +191,36 @@
     .pct-bar { display: none; }
     .pct-bar-wrap { gap: 0; }
   }
+
+  /* JS-driven mobile class for iframe environments */
+  .mobile .table-wrap { border-radius: 10px; }
+  .mobile thead { display: none; }
+  .mobile table, .mobile tbody, .mobile tr, .mobile td { display: block; width: 100%; }
+  .mobile tbody tr {
+    border-bottom: none; border-radius: 8px; background: var(--surface);
+    margin: 6px 8px; width: calc(100% - 16px);
+    padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
+  }
+  .mobile tbody tr:hover { background: var(--surface-hover); }
+  .mobile tbody td {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; white-space: normal; font-size: 0.82rem; border: none;
+  }
+  .mobile tbody td::before {
+    content: attr(data-label); font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-dim); min-width: 80px;
+  }
+  .mobile tbody td.td-rank {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .mobile tbody td.td-rank::before { display: none; }
+  .mobile tbody td.td-rank .rank-cell { font-size: 1.1rem; width: 32px; text-align: center; }
+  .mobile tbody td.td-name { display: none; }
+  .mobile .pct-bar { display: none; }
+  .mobile .pct-bar-wrap { gap: 0; }
 </style>
 </head>
 <body>
@@ -408,6 +438,20 @@ function loadData() {
   };
   xhr.send();
 }
+
+// Apply mobile class based on container width (works inside iframes)
+function checkWidth() {
+  const container = document.querySelector('.container');
+  if (container) {
+    if (container.offsetWidth < 700) {
+      document.body.classList.add('mobile');
+    } else {
+      document.body.classList.remove('mobile');
+    }
+  }
+}
+window.addEventListener('resize', checkWidth);
+checkWidth();
 
 loadData();
 </script>
